@@ -57,6 +57,11 @@ def agent(accounts):
 
 
 @pytest.fixture(scope="module")
+def rewards_utils_wrapper(RewardsUtilsWrapper, deployer):
+    return RewardsUtilsWrapper.deploy({"from": deployer})
+
+
+@pytest.fixture(scope="module")
 def incentives_controller_stub_implementation(IncentivesControllerStub, deployer):
     return IncentivesControllerStub.deploy({"from": deployer})
 
