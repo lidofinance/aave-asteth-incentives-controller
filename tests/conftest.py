@@ -62,6 +62,11 @@ def rewards_utils_wrapper(RewardsUtilsWrapper, deployer):
 
 
 @pytest.fixture(scope="module")
+def rewards_manager(RewardsManager, owner):
+    return RewardsManager.deploy({"from": owner})
+
+
+@pytest.fixture(scope="module")
 def incentives_controller_stub_implementation(IncentivesControllerStub, deployer):
     return IncentivesControllerStub.deploy({"from": deployer})
 
@@ -84,6 +89,16 @@ def incentives_controller(
     )
     return Contract.from_abi(
         "IncentivesControllerStub", proxy, IncentivesControllerStub.abi
+    )
+
+
+@pytest.fixture(scope="module")
+def incentives_controller_impl(ldo, owner, deployer, rewards_distributor):
+    return deployment.deploy_incentives_controller_impl(
+        reward_token=ldo,
+        owner=owner,
+        rewards_distributor=rewards_distributor,
+        tx_params={"from": deployer},
     )
 
 
@@ -132,7 +147,7 @@ def stable_debt_steth_impl(lending_pool, steth, deployer):
 
 
 @pytest.fixture(scope="module")
-def steth_reserve_setup(
+def steth_reserve(
     lending_pool,
     lending_pool_configurator,
     asteth_impl,
@@ -152,3 +167,8 @@ def steth_reserve_setup(
         pool_admin=pool_admin,
         deployer=deployer,
     )
+
+
+@pytest.fixture(scope="module")
+def asteth_mock(AStEthMock, deployer, incentives_controller_impl):
+    return AStEthMock.deploy(incentives_controller_impl, {"from": deployer})

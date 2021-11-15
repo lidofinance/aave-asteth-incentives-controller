@@ -1,5 +1,11 @@
 from pathlib import Path
-from brownie import Contract, config, ZERO_ADDRESS, project
+from brownie import (
+    Contract,
+    AaveAStETHIncentivesController,
+    config,
+    ZERO_ADDRESS,
+    project,
+)
 from utils.common import is_almost_equal
 from utils import aave, constants
 
@@ -92,6 +98,38 @@ def deploy_stable_debt_steth_impl(lending_pool, steth, deployer):
         ZERO_ADDRESS,
         {"from": deployer},
     )
+
+
+def deploy_incentives_controller_impl(
+    reward_token=ZERO_ADDRESS,
+    owner=ZERO_ADDRESS,
+    rewards_distributor=ZERO_ADDRESS,
+    rewards_duration=constants.DEFAULT_REWARDS_DURATION,
+    tx_params=None,
+):
+    return AaveAStETHIncentivesController.deploy(
+        reward_token, owner, rewards_distributor, rewards_duration, tx_params
+    )
+
+
+def upgrade_incentives_controller_to_v2(
+    proxy,
+    implementation,
+    owner,
+    rewards_distributor,
+    rewards_duration=constants.DEFAULT_REWARDS_DURATION,
+    tx_params=None,
+):
+    upgrade_data = implementation.initialize.encode_input(
+        owner, rewards_distributor, rewards_duration
+    )
+    proxy.upgradeToAndCall(implementation, upgrade_data, tx_params)
+    incentives_controller = Contract.from_abi(
+        "AaveAStETHIncentivesControllerProxied", proxy, implementation.abi
+    )
+    assert incentives_controller.IMPLEMENTATION_VERSION() == 2
+    assert incentives_controller.version() == 2
+    return incentives_controller
 
 
 class DependencyLoader(object):

@@ -82,6 +82,7 @@ library RewardsUtils {
     depositorReward = earnedReward(state, prevTotalStaked, depositor, prevStaked);
     state.rewards[depositor].accumulatedRewardPerTokenPaid = newRewardPerToken;
     state.rewards[depositor].upcomingReward = depositorReward;
+    return depositorReward;
   }
 
   /// @notice Marks upcoming reward as paid resets its value and return amount of paid reward
@@ -105,7 +106,7 @@ library RewardsUtils {
   /// @param totalStaked The total staked amount of tokens at the current block timestamp
   function rewardPerToken(RewardsState storage state, uint256 totalStaked) internal view returns (uint256) {
     if (totalStaked == 0) {
-      return 0;
+      return state.accumulatedRewardPerToken;
     }
     uint256 timeDelta = _blockTimestampOrEndDate(state) - state.updatedAt;
     uint256 unaccountedRewardPerToken = (PRECISION * timeDelta * state.rewardPerSecond) / totalStaked;

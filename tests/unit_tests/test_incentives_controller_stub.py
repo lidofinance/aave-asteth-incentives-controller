@@ -57,6 +57,46 @@ def test_incentives_controller_proxied_deploy(
     assert incentives_controller_proxied.IMPLEMENTATION_VERSION() == 1
 
 
+def test_upgrade(
+    incentives_controller,
+    incentives_controller_stub_implementation,
+    incentives_controller_impl,
+    rewards_manager,
+    owner,
+    stranger,
+):
+    # must revert when called by stranger
+    initialize_data = incentives_controller_impl.initialize.encode_input(
+        owner, rewards_manager, constants.DEFAULT_REWARDS_DURATION
+    )
+    with reverts("Ownable: caller is not the owner"):
+        incentives_controller.upgradeToAndCall(
+            incentives_controller_impl, initialize_data, {"from": stranger}
+        )
+
+    # must revert when called by owner with same version of implementation
+    stub_initialize_data = (
+        incentives_controller_stub_implementation.initialize.encode_input(owner)
+    )
+    with reverts(typed_solidity_error("AlreadyInitialized()")):
+        incentives_controller.upgradeToAndCall(
+            incentives_controller_stub_implementation,
+            stub_initialize_data,
+            {"from": owner},
+        )
+
+    # must pass when called by owner with new version of implementation
+    assert incentives_controller.owner() == owner
+    assert incentives_controller.version() == 1
+    assert incentives_controller.IMPLEMENTATION_VERSION() == 1
+    incentives_controller.upgradeToAndCall(
+        incentives_controller_impl, initialize_data, {"from": owner}
+    )
+    assert incentives_controller.owner() == owner
+    assert incentives_controller.version() == 2
+    assert incentives_controller.IMPLEMENTATION_VERSION() == 2
+
+
 def test_handle_action(incentives_controller, stranger):
     # must not fail
     incentives_controller.handleAction(ZERO_ADDRESS, 0, 0, {"from": stranger})
