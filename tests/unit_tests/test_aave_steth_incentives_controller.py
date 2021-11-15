@@ -107,7 +107,7 @@ def test_set_rewards_duration(
         DEFAULT_TOTAL_REWARD, agent, {"from": rewards_distributor}
     )
     assert incentives_controller_impl_mock.periodFinish() >= chain[-1].timestamp
-    with reverts("REWARD_PERIOD_NOT_FINISHED"):
+    with reverts(common.typed_solidity_error("RewardsPeriodNotFinishedError()")):
         incentives_controller_impl_mock.setRewardsDuration(
             DEFAULT_REWARDS_DURATION, {"from": owner}
         )
@@ -117,7 +117,7 @@ def test_notify_reward_amount(
     incentives_controller_impl_mock, ldo, agent, owner, stranger, rewards_distributor
 ):
     # must revert when called not by rewards distributor
-    with reverts("NOT_REWARDS_DISTRIBUTOR"):
+    with reverts(common.typed_solidity_error("NotRewardsDistributorError()")):
         incentives_controller_impl_mock.notifyRewardAmount(
             DEFAULT_TOTAL_REWARD, agent, {"from": stranger}
         )

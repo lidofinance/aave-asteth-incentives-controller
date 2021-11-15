@@ -20,6 +20,9 @@ contract AaveAStETHIncentivesController is
     using RewardsUtils for RewardsUtils.RewardsState;
     using SafeERC20 for IERC20;
 
+    error NotRewardsDistributorError();
+    error RewardsPeriodNotFinishedError();
+
     event RewardsDistributorChanged(
         address indexed oldRewardsDistributor,
         address indexed newRewardsDistributor
@@ -51,8 +54,6 @@ contract AaveAStETHIncentivesController is
     ) UnstructuredStorageVersionised(_IMPLEMENTATION_VERSION) {
         REWARD_TOKEN = IERC20(_rewardToken);
         STAKING_TOKEN = IAStETH(_stakingToken);
-        // initialize logic with zero address as owner
-        // to prevent access to admin methods of implementaiton
         initialize(_owner, _rewardsDistributor, _rewardsDuration);
     }
 
@@ -124,8 +125,9 @@ contract AaveAStETHIncentivesController is
     }
 
     function notifyRewardAmount(uint256 reward, address rewardHolder) external {
-        require(msg.sender == _getRewardsDistributor(), "NOT_REWARDS_DISTRIBUTOR");
-
+        if (msg.sender != _getRewardsDistributor()) {
+            revert NotRewardsDistributorError();
+        }
         REWARD_TOKEN.safeTransferFrom(rewardHolder, address(this), reward);
         uint256 _periodFinish = _getRewardsState().endDate;
         uint256 _rewardsDuration = _getRewardsDuration();
@@ -147,7 +149,6 @@ contract AaveAStETHIncentivesController is
     }
 
     function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyOwner {
-        require(tokenAddress != address(STAKING_TOKEN), "CANT_WITHDRAW_STAKING_TOKEN");
         IERC20(tokenAddress).safeTransfer(owner(), tokenAmount);
         emit Recovered(tokenAddress, tokenAmount);
     }
@@ -201,7 +202,9 @@ contract AaveAStETHIncentivesController is
     }
 
     function _setRewardsDuration(uint256 _rewardsDuration) private {
-        require(block.timestamp > _getRewardsState().endDate, "REWARD_PERIOD_NOT_FINISHED");
+        if (block.timestamp <= _getRewardsState().endDate) {
+            revert RewardsPeriodNotFinishedError();
+        }
         StorageSlot.getUint256Slot(REWARDS_DURATION_SLOT).value = _rewardsDuration;
         emit RewardsDurationUpdated(_rewardsDuration);
     }
