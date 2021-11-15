@@ -2,15 +2,10 @@
 pragma solidity 0.8.10;
 
 import {IAStETH} from "../interfaces/IAStETH.sol";
+import {IAaveIncentivesController} from "../interfaces/IAaveIncentivesController.sol";
 
-interface IAaveIncentivesController {
-    function handleAction(
-        address user,
-        uint256 totalSupply,
-        uint256 userBalance
-    ) external;
-}
-
+/// @author psirex
+/// @notice Mock of AStETH for testing purposes
 contract AStEthMock is IAStETH {
     uint256 public totalSupply;
     mapping(address => uint256) public balances;
@@ -20,12 +15,6 @@ contract AStEthMock is IAStETH {
         incentivesController = _incentivesController;
     }
 
-    /**
-     * @dev Returns the scaled balance of the user and the scaled total supply.
-     * @param user The address of the user
-     * @return The scaled balance of the user
-     * @return The scaled balance and the scaled total supply
-     **/
     function getInternalUserBalanceAndSupply(address user)
         external
         view
@@ -35,10 +24,6 @@ contract AStEthMock is IAStETH {
         return (balances[user], totalSupply);
     }
 
-    /**
-     * @dev Returns the scaled total supply of the token. Represents sum(debt/index)
-     * @return The scaled total supply
-     **/
     function internalTotalSupply() external view override returns (uint256) {
         return totalSupply;
     }

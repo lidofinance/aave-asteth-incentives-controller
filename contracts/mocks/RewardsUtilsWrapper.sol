@@ -3,6 +3,8 @@ pragma solidity 0.8.10;
 
 import {RewardsUtils} from "../utils/RewardsUtils.sol";
 
+/// @author psirex
+/// @notice The wrapper on RewardsUtils library for testing purposes
 contract RewardsUtilsWrapper {
     using RewardsUtils for RewardsUtils.RewardsState;
     RewardsUtils.RewardsState public rewardsState;

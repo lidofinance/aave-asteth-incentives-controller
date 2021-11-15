@@ -9,6 +9,8 @@ import {IAaveIncentivesController} from "../interfaces/IAaveIncentivesController
 
 import {UnstructuredStorageVersionised} from "./UnstructuredStorageVersionised.sol";
 
+/// @author psirex
+/// @notice Upgradable stub implementation for the IAaveIncentivesController
 contract AaveIncentivesControllerStub is UnstructuredStorageVersionised, IAaveIncentivesController {
     uint256 private constant _IMPLEMENTATION_VERSION = 1;
 
@@ -20,6 +22,11 @@ contract AaveIncentivesControllerStub is UnstructuredStorageVersionised, IAaveIn
         _initialize(owner);
     }
 
+    /// @notice Stub implementation of handleAction method
+    /// @dev Called by the corresponding asset on any update that affects the rewards distribution
+    /// @param user The address of the user
+    /// @param totalSupply The total supply of the asset in the lending pool before update
+    /// @param userBalance The balance of the user of the asset in the lending pool before update
     function handleAction(
         address user,
         uint256 totalSupply,

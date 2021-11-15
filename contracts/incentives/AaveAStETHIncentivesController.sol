@@ -13,6 +13,10 @@ import {UnstructuredStorageVersionised} from "./UnstructuredStorageVersionised.s
 import {IAStETH} from "../interfaces/IAStETH.sol";
 import {IAaveIncentivesController} from "../interfaces/IAaveIncentivesController.sol";
 
+/// @author psirex
+/// @notice Upgradable implementation for the IAaveIncentivesController
+///     with linear rewards distribution across depositors proportional
+///     to their stake size.
 contract AaveAStETHIncentivesController is
     UnstructuredStorageVersionised,
     IAaveIncentivesController
@@ -57,6 +61,9 @@ contract AaveAStETHIncentivesController is
         initialize(_owner, _rewardsDistributor, _rewardsDuration);
     }
 
+    /// @notice Initializes contract if the current version hasn't initialized yet.
+    ///     Transfers ownership to owner, sets rewards distributor and
+    ///     sets rewards duration.
     function initialize(
         address owner,
         address _rewardsDistributor,
@@ -67,14 +74,21 @@ contract AaveAStETHIncentivesController is
         _setRewardsDistributor(_rewardsDistributor);
     }
 
+    /// @notice Returns current rewards distributor address
     function rewardsDistributor() external view returns (address) {
         return _getRewardsDistributor();
     }
 
+    /// @notice Returns current rewards duration
     function rewardsDuration() external view returns (uint256) {
         return _getRewardsDuration();
     }
 
+    /// @notice Updates rewards of the depositor
+    /// @dev Called by the corresponding asset on any update that affects the rewards distribution
+    /// @param user The address of the user
+    /// @param totalSupply The total supply of the asset in the lending pool before update
+    /// @param userBalance The balance of the user of the asset in the lending pool before update
     function handleAction(
         address user,
         uint256 totalSupply,
@@ -93,22 +107,17 @@ contract AaveAStETHIncentivesController is
         }
     }
 
-    function depositorRewards(address depositor)
-        external
-        view
-        returns (RewardsUtils.Reward memory)
-    {
-        return _getRewardsState().rewards[depositor];
-    }
-
+    /// @notice Sets the value of rewards distributor. Might be called only by the owner
     function setRewardsDistributor(address newRewardsDistributor) external onlyOwner {
         _setRewardsDistributor(newRewardsDistributor);
     }
 
+    /// @notice Sets the value of rewards duration. Might be called only by the owner
     function setRewardsDuration(uint256 _rewardsDuration) external onlyOwner {
         _setRewardsDuration(_rewardsDuration);
     }
 
+    /// @notice Transfers all earned tokens to the depositor and reset his reward
     function claimReward() public {
         (uint256 stakedByUser, uint256 totalStaked) = STAKING_TOKEN.getInternalUserBalanceAndSupply(
             msg.sender
@@ -124,6 +133,11 @@ contract AaveAStETHIncentivesController is
         }
     }
 
+    /// @notice Starts reward period to distribute given amount of tokens from the current timestamp
+    ///     during rewards duration. If the previous reward period hasn't finished, adds the given
+    ///     reward to the previous reward. Might be called only by rewards distributor
+    /// @param reward Amount of tokens to distribute on reward period
+    /// @param rewardHolder Address to retrieve reward tokens
     function notifyRewardAmount(uint256 reward, address rewardHolder) external {
         if (msg.sender != _getRewardsDistributor()) {
             revert NotRewardsDistributorError();
@@ -148,12 +162,18 @@ contract AaveAStETHIncentivesController is
         emit RewardAdded(reward);
     }
 
+    /// @notice Allows recovering ERC20 tokens from incentives controller to the owner address.
+    ///     Might be called only by the owner
+    /// @param tokenAddress Address of ERC20 token to recover
+    /// @param tokenAmount Number of tokens to recover
     function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyOwner {
         IERC20(tokenAddress).safeTransfer(owner(), tokenAmount);
         emit Recovered(tokenAddress, tokenAmount);
     }
 
-    // End rewards emission earlier
+    /// @notice  Updates end date of reward program. Might be used to end rewards emission earlier.
+    ///     Might be called only by the owner
+    /// @param endDate New end date of reward program. Must be greater or equal than the block.timestamp
     function updatePeriodFinish(uint256 endDate) external onlyOwner {
         uint256 totalStaked = STAKING_TOKEN.internalTotalSupply();
         _getRewardsState().updateRewardPeriod(
@@ -163,6 +183,8 @@ contract AaveAStETHIncentivesController is
         );
     }
 
+    /// @notice Returns amount of tokens earned by the depositor
+    /// @param depositor Address of the depositor
     function earned(address depositor) external view returns (uint256) {
         (uint256 staked, uint256 totalStaked) = STAKING_TOKEN.getInternalUserBalanceAndSupply(
             depositor
@@ -170,10 +192,12 @@ contract AaveAStETHIncentivesController is
         return _getRewardsState().earnedReward(totalStaked, depositor, staked);
     }
 
+    /// @notice Returns end date of the reward period
     function periodFinish() external view returns (uint256) {
         return _getRewardsState().endDate;
     }
 
+    /// @notice Returns current reward per second
     function rewardPerSecond() external view returns (uint256) {
         return _getRewardsState().rewardPerSecond;
     }
