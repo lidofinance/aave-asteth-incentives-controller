@@ -104,14 +104,20 @@ def deploy_stable_debt_steth_impl(lending_pool, steth, deployer):
 
 
 def deploy_incentives_controller_impl(
-    reward_token=ZERO_ADDRESS,
+    reward_token,
+    staking_token,
     owner=ZERO_ADDRESS,
     rewards_distributor=ZERO_ADDRESS,
     rewards_duration=constants.DEFAULT_REWARDS_DURATION,
     tx_params=None,
 ):
     return AaveAStETHIncentivesController.deploy(
-        reward_token, owner, rewards_distributor, rewards_duration, tx_params
+        reward_token,
+        staking_token,
+        owner,
+        rewards_distributor,
+        rewards_duration,
+        tx_params,
     )
 
 

@@ -12,7 +12,7 @@ contract AStEthMock is IAStETH {
     mapping(address => uint256) public balances;
     address public incentivesController;
 
-    constructor(address _incentivesController) {
+    function setIncentivesController(address _incentivesController) external {
         incentivesController = _incentivesController;
     }
 

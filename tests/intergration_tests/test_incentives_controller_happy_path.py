@@ -46,10 +46,6 @@ def test_happy_path(
         tx_params={"from": owner},
     )
 
-    # set staking token
-    incentives_controller.setStakingToken(steth_reserve.atoken, {"from": owner})
-    assert incentives_controller.stakingToken() == steth_reserve.atoken
-
     # depositor2 send ether into the pool
     depositor2 = depositors[1]
     deposit2 = Wei("0.5 ether")

@@ -89,9 +89,25 @@ def incentives_controller(
 
 
 @pytest.fixture(scope="module")
-def incentives_controller_impl(ldo, owner, deployer, rewards_distributor):
+def incentives_controller_impl(
+    ldo, owner, deployer, rewards_distributor, steth_reserve
+):
     return deployment.deploy_incentives_controller_impl(
         reward_token=ldo,
+        staking_token=steth_reserve.atoken,
+        owner=owner,
+        rewards_distributor=rewards_distributor,
+        tx_params={"from": deployer},
+    )
+
+
+@pytest.fixture(scope="module")
+def incentives_controller_impl_mock(
+    ldo, owner, deployer, rewards_distributor, asteth_mock
+):
+    return deployment.deploy_incentives_controller_impl(
+        reward_token=ldo,
+        staking_token=asteth_mock,
         owner=owner,
         rewards_distributor=rewards_distributor,
         tx_params={"from": deployer},
@@ -166,5 +182,5 @@ def steth_reserve(
 
 
 @pytest.fixture(scope="module")
-def asteth_mock(AStEthMock, deployer, incentives_controller_impl):
-    return AStEthMock.deploy(incentives_controller_impl, {"from": deployer})
+def asteth_mock(AStEthMock, deployer):
+    return AStEthMock.deploy({"from": deployer})

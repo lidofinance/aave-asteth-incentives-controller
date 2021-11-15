@@ -12,7 +12,6 @@ contract AaveAStETHIncentivesController is Ownable, UUPSUpgradeable {
     using RewardsUtils for RewardsUtils.RewardsState;
     using SafeERC20 for IERC20;
     
-    event StakingTokenChanged(address indexed oldStakingToken, address indexed newStakingToken);
     event RewardsDistributorChanged(address indexed oldRewardsDistributor, address indexed newRewardsDistributor);
     event RewardAdded(uint256 rewardAmount);
     event RewardPaid(address indexed user, uint256 reward);
@@ -22,15 +21,16 @@ contract AaveAStETHIncentivesController is Ownable, UUPSUpgradeable {
 
     uint8 public constant IMPLEMENTATION_VERSION = 2;
     IERC20 public immutable REWARD_TOKEN;
+    IAStETH public immutable STAKING_TOKEN;
 
     uint8 public version;
-    IAStETH public stakingToken;
     address public rewardsDistributor;
     uint256 public rewardsDuration;
     RewardsUtils.RewardsState public rewardsState;
 
-    constructor(address _rewardToken, address _owner, address _rewardsDistributor, uint256 _rewardsDuration) {
+    constructor(address _rewardToken, address _stakingToken, address _owner, address _rewardsDistributor, uint256 _rewardsDuration) {
         REWARD_TOKEN = IERC20(_rewardToken);
+        STAKING_TOKEN = IAStETH(_stakingToken);
         // initialize logic with zero address as owner
         // to prevent access to admin methods of implementaiton
         initialize(_owner, _rewardsDistributor, _rewardsDuration);
@@ -50,7 +50,7 @@ contract AaveAStETHIncentivesController is Ownable, UUPSUpgradeable {
       uint256 totalSupply,
       uint256 userBalance
     ) external {
-        if (msg.sender != address(stakingToken)) {
+        if (msg.sender != address(STAKING_TOKEN)) {
             return;
         }
         uint256 earnedRewards = rewardsState.updateDepositorReward(totalSupply, user, userBalance);
@@ -71,16 +71,8 @@ contract AaveAStETHIncentivesController is Ownable, UUPSUpgradeable {
         _setRewardsDuration(_rewardsDuration);
     }
 
-    function setStakingToken(address newStakingToken) external onlyOwner {
-        address oldStakingToken = address(stakingToken);
-        if (oldStakingToken != newStakingToken) {
-            stakingToken = IAStETH(newStakingToken);
-            emit StakingTokenChanged(oldStakingToken, newStakingToken);
-        }
-    }
-
     function claimReward() public {
-        (uint256 stakedByUser, uint256 totalStaked) = stakingToken.getInternalUserBalanceAndSupply(msg.sender);
+        (uint256 stakedByUser, uint256 totalStaked) = STAKING_TOKEN.getInternalUserBalanceAndSupply(msg.sender);
         uint256 reward = rewardsState.payDepositorReward(totalStaked, msg.sender, stakedByUser);
         if (reward > 0) {
             REWARD_TOKEN.safeTransfer(msg.sender, reward);
@@ -102,25 +94,25 @@ contract AaveAStETHIncentivesController is Ownable, UUPSUpgradeable {
             uint256 leftover = remaining * rewardsState.rewardPerSecond;
             _rewardPerSecond = (reward + leftover) / _rewardsDuration;
         }
-        uint256 totalStaked = stakingToken.internalTotalSupply();
+        uint256 totalStaked = STAKING_TOKEN.internalTotalSupply();
         rewardsState.updateRewardPeriod(totalStaked, _rewardPerSecond, block.timestamp + _rewardsDuration);
         emit RewardAdded(reward);
     }
 
     function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyOwner {
-        require(tokenAddress != address(stakingToken), "CANT_WITHDRAW_STAKING_TOKEN");
+        require(tokenAddress != address(STAKING_TOKEN), "CANT_WITHDRAW_STAKING_TOKEN");
         IERC20(tokenAddress).safeTransfer(owner(), tokenAmount);
         emit Recovered(tokenAddress, tokenAmount);
     }
 
     // End rewards emission earlier
     function updatePeriodFinish(uint endDate) external onlyOwner {
-        uint256 totalStaked = stakingToken.internalTotalSupply();
+        uint256 totalStaked = STAKING_TOKEN.internalTotalSupply();
         rewardsState.updateRewardPeriod(totalStaked, rewardsState.rewardPerSecond, endDate);
     }
 
     function earned(address depositor) external view returns (uint256) {
-        (uint256 staked, uint256 totalStaked) = stakingToken.getInternalUserBalanceAndSupply(depositor);
+        (uint256 staked, uint256 totalStaked) = STAKING_TOKEN.getInternalUserBalanceAndSupply(depositor);
         return rewardsState.earnedReward(totalStaked, depositor, staked);
     }
 
