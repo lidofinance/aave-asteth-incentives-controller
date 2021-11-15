@@ -63,12 +63,12 @@ def rewards_utils_wrapper(RewardsUtilsWrapper, deployer):
 
 @pytest.fixture(scope="module")
 def rewards_manager(RewardsManager, owner):
-    return RewardsManager.deploy({"from": owner})
+    return deployment.deploy_rewards_manager({"from": owner})
 
 
 @pytest.fixture(scope="module")
-def incentives_controller_stub_implementation(IncentivesControllerStub, deployer):
-    return IncentivesControllerStub.deploy({"from": deployer})
+def incentives_controller_stub_implementation(deployer):
+    return deployment.deploy_incentives_controller_stub_impl({"from": deployer})
 
 
 @pytest.fixture(scope="module")
@@ -80,15 +80,11 @@ def incentives_controller(
     deployer,
     owner,
 ):
-    """
-    Proxied stub of incentives controller
-    """
-    data = incentives_controller_stub_implementation.initialize.encode_input(owner)
-    proxy = ERC1967Proxy.deploy(
-        incentives_controller_stub_implementation, data, {"from": deployer}
-    )
-    return Contract.from_abi(
-        "IncentivesControllerStub", proxy, IncentivesControllerStub.abi
+    init_data = incentives_controller_stub_implementation.initialize.encode_input(owner)
+    return deployment.deploy_proxy(
+        implementation=incentives_controller_stub_implementation,
+        init_data=init_data,
+        tx_params={"from": deployer},
     )
 
 

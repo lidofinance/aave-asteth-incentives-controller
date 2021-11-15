@@ -1,7 +1,10 @@
 from pathlib import Path
 from brownie import (
     Contract,
+    ERC1967Proxy,
+    RewardsManager,
     AaveAStETHIncentivesController,
+    IncentivesControllerStub,
     config,
     ZERO_ADDRESS,
     project,
@@ -130,6 +133,19 @@ def upgrade_incentives_controller_to_v2(
     assert incentives_controller.IMPLEMENTATION_VERSION() == 2
     assert incentives_controller.version() == 2
     return incentives_controller
+
+
+def deploy_rewards_manager(tx_params):
+    return RewardsManager.deploy(tx_params)
+
+
+def deploy_proxy(implementation, init_data, tx_params):
+    proxy = ERC1967Proxy.deploy(implementation, init_data, tx_params)
+    return Contract.from_abi("ProxiedImpl", proxy, implementation.abi)
+
+
+def deploy_incentives_controller_stub_impl(tx_params):
+    return IncentivesControllerStub.deploy(tx_params)
 
 
 class DependencyLoader(object):
