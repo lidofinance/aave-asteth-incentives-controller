@@ -24,7 +24,7 @@
     "error-reason": "warning",
     "constructor": "warning",
     "visibility-first": "warning",
-    "lbrace": "warning",
+    "lbrace": "off",
     "mixedcase": "off",
     "camelcase": "off",
     "uppercase": "off",
@@ -33,6 +33,7 @@
     "conditionals-whitespace": "warning",
     "no-experimental": "off",
     "no-trailing-whitespace": "warning",
-    "security/no-inline-assembly": "warning"
+    "security/no-inline-assembly": "warning",
+    "security/no-block-members": "off"
   }
 }
