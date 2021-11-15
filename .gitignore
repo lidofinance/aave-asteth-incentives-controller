@@ -3,5 +3,6 @@ __pycache__
 .history
 .hypothesis/
 .vscode/
+node_modules/
 build/
 reports/
