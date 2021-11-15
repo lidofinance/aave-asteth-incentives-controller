@@ -7,6 +7,7 @@ import { IERC20 } from '../dependencies/openzeppelin/IERC20.sol';
 import { Ownable } from '../dependencies/openzeppelin/Ownable.sol';
 import { SafeERC20 } from '../dependencies/openzeppelin/SafeERC20.sol';
 import { UUPSUpgradeable } from '../dependencies/openzeppelin/UUPSUpgradable.sol';
+import { StorageSlot } from '../dependencies/openzeppelin/StorageSlot.sol';
 
 contract AaveAStETHIncentivesController is Ownable, UUPSUpgradeable {
     using RewardsUtils for RewardsUtils.RewardsState;
@@ -19,14 +20,14 @@ contract AaveAStETHIncentivesController is Ownable, UUPSUpgradeable {
     event Recovered(address indexed token, uint256 amount);
     event RewardsAccrued(address indexed depositor, uint256 earnedRewards);
 
-    uint8 public constant IMPLEMENTATION_VERSION = 2;
+    bytes32 private constant VERSION_SLOT = keccak256('Lido.AaveAStETHIncentivesController.version');
+    bytes32 private constant REWARDS_DISTRIBUTOR_SLOT = keccak256('Lido.AaveAStETHIncentivesController.rewardsDistributor');
+    bytes32 private constant REWARDS_DURATION_SLOT = keccak256('Lido.AaveAStETHIncentivesController.rewardsDuration');
+    bytes32 private constant REWARDS_STATE_SLOT = keccak256('Lido.AaveAStETHIncentivesController.rewardsState');
+
+    uint256 public constant IMPLEMENTATION_VERSION = 2;
     IERC20 public immutable REWARD_TOKEN;
     IAStETH public immutable STAKING_TOKEN;
-
-    uint8 public version;
-    address public rewardsDistributor;
-    uint256 public rewardsDuration;
-    RewardsUtils.RewardsState public rewardsState;
 
     constructor(address _rewardToken, address _stakingToken, address _owner, address _rewardsDistributor, uint256 _rewardsDuration) {
         REWARD_TOKEN = IERC20(_rewardToken);
@@ -37,13 +38,24 @@ contract AaveAStETHIncentivesController is Ownable, UUPSUpgradeable {
     }
 
     function initialize(address owner, address _rewardsDistributor, uint256 _rewardsDuration) public {
-        require(version != IMPLEMENTATION_VERSION, 'ALREADY_INITIALIZED');
-        version = IMPLEMENTATION_VERSION;
+        require(_getVersion() != IMPLEMENTATION_VERSION, 'ALREADY_INITIALIZED');
+        _setVersion(IMPLEMENTATION_VERSION);
         _transferOwnership(owner);
         _setRewardsDuration(_rewardsDuration);
         _setRewardsDistributor(_rewardsDistributor);
     }
 
+    function version() external view returns (uint256) {
+        return _getVersion();
+    }
+
+    function rewardsDistributor() external view returns (address) {
+        return _getRewardsDistributor();
+    }
+
+    function rewardsDuration() external view returns (uint256) {
+        return _getRewardsDuration();
+    }
 
     function handleAction(
       address user,
@@ -53,14 +65,14 @@ contract AaveAStETHIncentivesController is Ownable, UUPSUpgradeable {
         if (msg.sender != address(STAKING_TOKEN)) {
             return;
         }
-        uint256 earnedRewards = rewardsState.updateDepositorReward(totalSupply, user, userBalance);
+        uint256 earnedRewards = _getRewardsState().updateDepositorReward(totalSupply, user, userBalance);
         if (earnedRewards > 0) {
             emit RewardsAccrued(user, earnedRewards);
         }
     }
 
     function depositorRewards(address depositor) external view returns (RewardsUtils.Reward memory) {
-        return rewardsState.rewards[depositor];
+        return _getRewardsState().rewards[depositor];
     }
 
     function setRewardsDistributor(address newRewardsDistributor) external onlyOwner {
@@ -73,7 +85,7 @@ contract AaveAStETHIncentivesController is Ownable, UUPSUpgradeable {
 
     function claimReward() public {
         (uint256 stakedByUser, uint256 totalStaked) = STAKING_TOKEN.getInternalUserBalanceAndSupply(msg.sender);
-        uint256 reward = rewardsState.payDepositorReward(totalStaked, msg.sender, stakedByUser);
+        uint256 reward = _getRewardsState().payDepositorReward(totalStaked, msg.sender, stakedByUser);
         if (reward > 0) {
             REWARD_TOKEN.safeTransfer(msg.sender, reward);
             emit RewardPaid(msg.sender, reward);
@@ -81,21 +93,21 @@ contract AaveAStETHIncentivesController is Ownable, UUPSUpgradeable {
     }
 
     function notifyRewardAmount(uint256 reward, address rewardHolder) external {
-        require(msg.sender == rewardsDistributor, "NOT_REWARDS_DISTRIBUTOR");
+        require(msg.sender == _getRewardsDistributor(), "NOT_REWARDS_DISTRIBUTOR");
 
         REWARD_TOKEN.safeTransferFrom(rewardHolder, address(this), reward);
-        uint256 _periodFinish = rewardsState.endDate;
-        uint256 _rewardsDuration = rewardsDuration;
+        uint256 _periodFinish = _getRewardsState().endDate;
+        uint256 _rewardsDuration = _getRewardsDuration();
         uint256 _rewardPerSecond = 0;
         if (block.timestamp >= _periodFinish) {
             _rewardPerSecond = reward / _rewardsDuration;
         } else {
             uint256 remaining = _periodFinish - block.timestamp;
-            uint256 leftover = remaining * rewardsState.rewardPerSecond;
+            uint256 leftover = remaining * _getRewardsState().rewardPerSecond;
             _rewardPerSecond = (reward + leftover) / _rewardsDuration;
         }
         uint256 totalStaked = STAKING_TOKEN.internalTotalSupply();
-        rewardsState.updateRewardPeriod(totalStaked, _rewardPerSecond, block.timestamp + _rewardsDuration);
+        _getRewardsState().updateRewardPeriod(totalStaked, _rewardPerSecond, block.timestamp + _rewardsDuration);
         emit RewardAdded(reward);
     }
 
@@ -108,37 +120,60 @@ contract AaveAStETHIncentivesController is Ownable, UUPSUpgradeable {
     // End rewards emission earlier
     function updatePeriodFinish(uint endDate) external onlyOwner {
         uint256 totalStaked = STAKING_TOKEN.internalTotalSupply();
-        rewardsState.updateRewardPeriod(totalStaked, rewardsState.rewardPerSecond, endDate);
+        _getRewardsState().updateRewardPeriod(totalStaked, _getRewardsState().rewardPerSecond, endDate);
     }
 
     function earned(address depositor) external view returns (uint256) {
         (uint256 staked, uint256 totalStaked) = STAKING_TOKEN.getInternalUserBalanceAndSupply(depositor);
-        return rewardsState.earnedReward(totalStaked, depositor, staked);
+        return _getRewardsState().earnedReward(totalStaked, depositor, staked);
     }
 
     function periodFinish() external view returns (uint256) {
-        return rewardsState.endDate;
+        return _getRewardsState().endDate;
     }
 
     function rewardPerSecond() external view returns (uint256) {
-        return rewardsState.rewardPerSecond;
+        return _getRewardsState().rewardPerSecond;
+    }
+
+    function _getVersion() private view returns (uint256) {
+        return StorageSlot.getUint256Slot(VERSION_SLOT).value;
+    } 
+
+    function _setVersion(uint256 newVersion) private {
+        StorageSlot.getUint256Slot(VERSION_SLOT).value = newVersion;
+    }
+
+    function _getRewardsDistributor() private view returns (address) {
+        return StorageSlot.getAddressSlot(REWARDS_DISTRIBUTOR_SLOT).value;
+    }
+
+    function _setRewardsDistributor(address newRewardsDistributor) private {
+        address oldRewardsDistributor = _getRewardsDistributor();
+        if (oldRewardsDistributor != newRewardsDistributor) {
+            StorageSlot.getAddressSlot(REWARDS_DISTRIBUTOR_SLOT).value = newRewardsDistributor;
+            emit RewardsDistributorChanged(oldRewardsDistributor, newRewardsDistributor);
+        }
+    }
+
+    function _getRewardsState() private pure returns (RewardsUtils.RewardsState storage result) {
+        bytes32 rewards_state_slot = REWARDS_STATE_SLOT;
+        assembly {
+            result.slot := rewards_state_slot
+        }
+    }
+
+    function _getRewardsDuration() private view returns (uint256) {
+        return StorageSlot.getUint256Slot(REWARDS_DURATION_SLOT).value;
     }
 
     function _setRewardsDuration(uint256 _rewardsDuration) private {
         require(
-            block.timestamp > rewardsState.endDate,
+            block.timestamp > _getRewardsState().endDate,
             "REWARD_PERIOD_NOT_FINISHED"
         );
-        rewardsDuration = _rewardsDuration;
+        StorageSlot.getUint256Slot(REWARDS_DURATION_SLOT).value = _rewardsDuration;
         emit RewardsDurationUpdated(_rewardsDuration);
-    }
-
-    function _setRewardsDistributor(address newRewardsDistributor) private {
-        address oldRewardsDistributor = rewardsDistributor;
-        if (oldRewardsDistributor != newRewardsDistributor) {
-            rewardsDistributor = newRewardsDistributor;
-            emit RewardsDistributorChanged(oldRewardsDistributor, newRewardsDistributor);
-        }
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}

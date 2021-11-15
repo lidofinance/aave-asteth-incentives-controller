@@ -22,7 +22,7 @@ def test_happy_path(
     depositors,
 ):
     is_almost_equal = partial(
-        common.is_almost_equal, epsilon=2 * DEFAULT_REWARD_PER_SECOND
+        common.is_almost_equal, epsilon=5 * DEFAULT_REWARD_PER_SECOND
     )
     asteth = steth_reserve.atoken
     lending_pool = steth_reserve.lending_pool
