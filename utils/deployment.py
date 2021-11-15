@@ -4,7 +4,7 @@ from brownie import (
     ERC1967Proxy,
     RewardsManager,
     AaveAStETHIncentivesController,
-    IncentivesControllerStub,
+    AaveIncentivesControllerStub,
     config,
     ZERO_ADDRESS,
     project,
@@ -151,7 +151,7 @@ def deploy_proxy(implementation, init_data, tx_params):
 
 
 def deploy_incentives_controller_stub_impl(tx_params):
-    return IncentivesControllerStub.deploy(tx_params)
+    return AaveIncentivesControllerStub.deploy(tx_params)
 
 
 class DependencyLoader(object):

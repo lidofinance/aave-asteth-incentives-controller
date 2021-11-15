@@ -7,9 +7,9 @@ def typed_solidity_error(error_signature):
 
 
 def test_incentives_controller_stub_implementation_deploy(
-    IncentivesControllerStub, deployer, stranger
+    AaveIncentivesControllerStub, deployer, stranger
 ):
-    incentives_controller_stub_impl = IncentivesControllerStub.deploy(
+    incentives_controller_stub_impl = AaveIncentivesControllerStub.deploy(
         {"from": deployer}
     )
     assert incentives_controller_stub_impl.owner() == ZERO_ADDRESS
@@ -21,7 +21,7 @@ def test_incentives_controller_stub_implementation_deploy(
         incentives_controller_stub_impl.initialize(stranger, {"from": stranger})
 
     # must fail on attempt to call upgrade on implementation
-    new_incentives_controller_stub_impl = IncentivesControllerStub.deploy(
+    new_incentives_controller_stub_impl = AaveIncentivesControllerStub.deploy(
         {"from": deployer}
     )
     with reverts("Function must be called through delegatecall"):
@@ -39,7 +39,7 @@ def test_incentives_controller_stub_implementation_deploy(
 def test_incentives_controller_proxied_deploy(
     Contract,
     ERC1967Proxy,
-    IncentivesControllerStub,
+    AaveIncentivesControllerStub,
     incentives_controller_stub_implementation,
     owner,
     deployer,
@@ -49,7 +49,7 @@ def test_incentives_controller_proxied_deploy(
         incentives_controller_stub_implementation, data, {"from": deployer}
     )
     incentives_controller_proxied = Contract.from_abi(
-        "IncentivesControllerStub", proxy, IncentivesControllerStub.abi
+        "AaveIncentivesControllerStub", proxy, AaveIncentivesControllerStub.abi
     )
 
     assert incentives_controller_proxied.owner() == owner

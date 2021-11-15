@@ -75,7 +75,6 @@ def incentives_controller_stub_implementation(deployer):
 def incentives_controller(
     Contract,
     ERC1967Proxy,
-    IncentivesControllerStub,
     incentives_controller_stub_implementation,
     deployer,
     owner,
