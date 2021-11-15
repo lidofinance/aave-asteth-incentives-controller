@@ -137,7 +137,7 @@ def upgrade_incentives_controller_to_v2(
         "AaveAStETHIncentivesControllerProxied", proxy, implementation.abi
     )
     assert incentives_controller.IMPLEMENTATION_VERSION() == 2
-    assert incentives_controller.version() == 2
+    assert incentives_controller.initializedVersion() == 2
     return incentives_controller
 
 

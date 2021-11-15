@@ -26,12 +26,12 @@ def test_deploy(
     assert incentives_controller_impl_mock.owner() == owner
     assert incentives_controller_impl_mock.REWARD_TOKEN() == ldo
     assert incentives_controller_impl_mock.STAKING_TOKEN() == asteth_mock
-    assert incentives_controller_impl_mock.version() == 2
+    assert incentives_controller_impl_mock.initializedVersion() == 2
     assert incentives_controller_impl_mock.rewardsDuration() == DEFAULT_REWARDS_DURATION
     assert incentives_controller_impl_mock.rewardsDistributor() == rewards_distributor
 
     # validate that can't initialize version twice
-    with reverts(common.typed_solidity_error("AlreadyInitialized()")):
+    with reverts(common.typed_solidity_error("AlreadyInitializedError()")):
         incentives_controller_impl_mock.initialize(
             stranger, ZERO_ADDRESS, 0, {"from": stranger}
         )

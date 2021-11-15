@@ -9,11 +9,11 @@ def test_incentives_controller_stub_implementation_deploy(
         {"from": deployer}
     )
     assert incentives_controller_stub_impl.owner() == ZERO_ADDRESS
-    assert incentives_controller_stub_impl.version() == 1
+    assert incentives_controller_stub_impl.initializedVersion() == 1
     assert incentives_controller_stub_impl.IMPLEMENTATION_VERSION() == 1
 
     # must revert on attempt to initialize it second time
-    with reverts(common.typed_solidity_error("AlreadyInitialized()")):
+    with reverts(common.typed_solidity_error("AlreadyInitializedError()")):
         incentives_controller_stub_impl.initialize(stranger, {"from": stranger})
 
     # must fail on attempt to call upgrade on implementation
@@ -49,7 +49,7 @@ def test_incentives_controller_proxied_deploy(
     )
 
     assert incentives_controller_proxied.owner() == owner
-    assert incentives_controller_proxied.version() == 1
+    assert incentives_controller_proxied.initializedVersion() == 1
     assert incentives_controller_proxied.IMPLEMENTATION_VERSION() == 1
 
 
@@ -74,7 +74,7 @@ def test_upgrade(
     stub_initialize_data = (
         incentives_controller_stub_implementation.initialize.encode_input(owner)
     )
-    with reverts(common.typed_solidity_error("AlreadyInitialized()")):
+    with reverts(common.typed_solidity_error("AlreadyInitializedError()")):
         incentives_controller.upgradeToAndCall(
             incentives_controller_stub_implementation,
             stub_initialize_data,
@@ -83,13 +83,13 @@ def test_upgrade(
 
     # must pass when called by owner with new version of implementation
     assert incentives_controller.owner() == owner
-    assert incentives_controller.version() == 1
+    assert incentives_controller.initializedVersion() == 1
     assert incentives_controller.IMPLEMENTATION_VERSION() == 1
     incentives_controller.upgradeToAndCall(
         incentives_controller_impl, initialize_data, {"from": owner}
     )
     assert incentives_controller.owner() == owner
-    assert incentives_controller.version() == 2
+    assert incentives_controller.initializedVersion() == 2
     assert incentives_controller.IMPLEMENTATION_VERSION() == 2
 
 
