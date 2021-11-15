@@ -3,7 +3,7 @@ from brownie import reverts, ZERO_ADDRESS, Wei
 from brownie.network import history, chain
 from utils.common import is_almost_equal
 from utils.constants import DEFAULT_REWARDS_DURATION, DEFAULT_TOTAL_REWARD
-from utils import deployment
+from utils import deployment, common
 
 
 @pytest.fixture(scope="function")
@@ -31,7 +31,7 @@ def test_deploy(
     assert incentives_controller_impl_mock.rewardsDistributor() == rewards_distributor
 
     # validate that can't initialize version twice
-    with reverts("ALREADY_INITIALIZED"):
+    with reverts(common.typed_solidity_error("AlreadyInitialized()")):
         incentives_controller_impl_mock.initialize(
             stranger, ZERO_ADDRESS, 0, {"from": stranger}
         )

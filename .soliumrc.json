@@ -9,7 +9,7 @@
     "quotes": ["error", "double"],
     "value-in-payable": "error",
     "linebreak-style": ["error", "unix"],
-    "no-empty-blocks": "warning",
+    "no-empty-blocks": "off",
     "indentation": ["error", 4],
     "whitespace": "warning",
     "deprecated-suicide": "warning",

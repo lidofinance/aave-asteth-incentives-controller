@@ -1,9 +1,5 @@
-from brownie import ZERO_ADDRESS, reverts, web3
-from utils import constants
-
-
-def typed_solidity_error(error_signature):
-    return f"typed error: {web3.keccak(text=error_signature)[:4].hex()}"
+from brownie import ZERO_ADDRESS, reverts
+from utils import constants, common
 
 
 def test_incentives_controller_stub_implementation_deploy(
@@ -17,7 +13,7 @@ def test_incentives_controller_stub_implementation_deploy(
     assert incentives_controller_stub_impl.IMPLEMENTATION_VERSION() == 1
 
     # must revert on attempt to initialize it second time
-    with reverts(typed_solidity_error("AlreadyInitialized()")):
+    with reverts(common.typed_solidity_error("AlreadyInitialized()")):
         incentives_controller_stub_impl.initialize(stranger, {"from": stranger})
 
     # must fail on attempt to call upgrade on implementation
@@ -78,7 +74,7 @@ def test_upgrade(
     stub_initialize_data = (
         incentives_controller_stub_implementation.initialize.encode_input(owner)
     )
-    with reverts(typed_solidity_error("AlreadyInitialized()")):
+    with reverts(common.typed_solidity_error("AlreadyInitialized()")):
         incentives_controller.upgradeToAndCall(
             incentives_controller_stub_implementation,
             stub_initialize_data,

@@ -5,14 +5,14 @@ import {Ownable} from "../dependencies/openzeppelin/Ownable.sol";
 import {UUPSUpgradeable} from "../dependencies/openzeppelin/UUPSUpgradable.sol";
 import {StorageSlot} from "../dependencies/openzeppelin/StorageSlot.sol";
 
-contract AaveIncentivesControllerStub is Ownable, UUPSUpgradeable {
-    error AlreadyInitialized();
+import {IAaveIncentivesController} from "../interfaces/IAaveIncentivesController.sol";
 
-    bytes32 private constant VERSION_SLOT = keccak256("AaveAStETHIncentivesController.version");
+import {UnstructuredStorageVersionised} from "./UnstructuredStorageVersionised.sol";
 
-    uint256 public constant IMPLEMENTATION_VERSION = 1;
+contract AaveIncentivesControllerStub is UnstructuredStorageVersionised, IAaveIncentivesController {
+    uint256 private constant _IMPLEMENTATION_VERSION = 1;
 
-    constructor() {
+    constructor() UnstructuredStorageVersionised(_IMPLEMENTATION_VERSION) {
         _initialize(address(0));
     }
 
@@ -24,27 +24,5 @@ contract AaveIncentivesControllerStub is Ownable, UUPSUpgradeable {
         address user,
         uint256 totalSupply,
         uint256 userBalance
-    ) external {}
-
-    function version() external view returns (uint256) {
-        return _getVersion();
-    }
-
-    function _getVersion() private view returns (uint256) {
-        return StorageSlot.getUint256Slot(VERSION_SLOT).value;
-    }
-
-    function _setVersion(uint256 newVersion) private {
-        StorageSlot.getUint256Slot(VERSION_SLOT).value = newVersion;
-    }
-
-    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
-
-    function _initialize(address owner) private {
-        if (_getVersion() == IMPLEMENTATION_VERSION) {
-            revert AlreadyInitialized();
-        }
-        _setVersion(IMPLEMENTATION_VERSION);
-        _transferOwnership(owner);
-    }
+    ) external override {}
 }

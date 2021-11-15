@@ -1,15 +1,22 @@
 // SPDX-License-Identifier: agpl-3.0
 pragma solidity 0.8.10;
 
-import {RewardsUtils} from "../utils/RewardsUtils.sol";
-import {IAStETH} from "../interfaces/IAStETH.sol";
 import {IERC20} from "../dependencies/openzeppelin/IERC20.sol";
 import {Ownable} from "../dependencies/openzeppelin/Ownable.sol";
 import {SafeERC20} from "../dependencies/openzeppelin/SafeERC20.sol";
 import {UUPSUpgradeable} from "../dependencies/openzeppelin/UUPSUpgradable.sol";
 import {StorageSlot} from "../dependencies/openzeppelin/StorageSlot.sol";
 
-contract AaveAStETHIncentivesController is Ownable, UUPSUpgradeable {
+import {RewardsUtils} from "../utils/RewardsUtils.sol";
+import {UnstructuredStorageVersionised} from "./UnstructuredStorageVersionised.sol";
+
+import {IAStETH} from "../interfaces/IAStETH.sol";
+import {IAaveIncentivesController} from "../interfaces/IAaveIncentivesController.sol";
+
+contract AaveAStETHIncentivesController is
+    UnstructuredStorageVersionised,
+    IAaveIncentivesController
+{
     using RewardsUtils for RewardsUtils.RewardsState;
     using SafeERC20 for IERC20;
 
@@ -23,8 +30,6 @@ contract AaveAStETHIncentivesController is Ownable, UUPSUpgradeable {
     event Recovered(address indexed token, uint256 amount);
     event RewardsAccrued(address indexed depositor, uint256 earnedRewards);
 
-    bytes32 private constant VERSION_SLOT =
-        keccak256("Lido.AaveAStETHIncentivesController.version");
     bytes32 private constant REWARDS_DISTRIBUTOR_SLOT =
         keccak256("Lido.AaveAStETHIncentivesController.rewardsDistributor");
     bytes32 private constant REWARDS_DURATION_SLOT =
@@ -32,7 +37,8 @@ contract AaveAStETHIncentivesController is Ownable, UUPSUpgradeable {
     bytes32 private constant REWARDS_STATE_SLOT =
         keccak256("Lido.AaveAStETHIncentivesController.rewardsState");
 
-    uint256 public constant IMPLEMENTATION_VERSION = 2;
+    uint256 private constant _IMPLEMENTATION_VERSION = 2;
+
     IERC20 public immutable REWARD_TOKEN;
     IAStETH public immutable STAKING_TOKEN;
 
@@ -42,7 +48,7 @@ contract AaveAStETHIncentivesController is Ownable, UUPSUpgradeable {
         address _owner,
         address _rewardsDistributor,
         uint256 _rewardsDuration
-    ) {
+    ) UnstructuredStorageVersionised(_IMPLEMENTATION_VERSION) {
         REWARD_TOKEN = IERC20(_rewardToken);
         STAKING_TOKEN = IAStETH(_stakingToken);
         // initialize logic with zero address as owner
@@ -55,15 +61,9 @@ contract AaveAStETHIncentivesController is Ownable, UUPSUpgradeable {
         address _rewardsDistributor,
         uint256 _rewardsDuration
     ) public {
-        require(_getVersion() != IMPLEMENTATION_VERSION, "ALREADY_INITIALIZED");
-        _setVersion(IMPLEMENTATION_VERSION);
-        _transferOwnership(owner);
+        _initialize(owner);
         _setRewardsDuration(_rewardsDuration);
         _setRewardsDistributor(_rewardsDistributor);
-    }
-
-    function version() external view returns (uint256) {
-        return _getVersion();
     }
 
     function rewardsDistributor() external view returns (address) {
@@ -78,7 +78,7 @@ contract AaveAStETHIncentivesController is Ownable, UUPSUpgradeable {
         address user,
         uint256 totalSupply,
         uint256 userBalance
-    ) external {
+    ) external override {
         if (msg.sender != address(STAKING_TOKEN)) {
             return;
         }
@@ -177,14 +177,6 @@ contract AaveAStETHIncentivesController is Ownable, UUPSUpgradeable {
         return _getRewardsState().rewardPerSecond;
     }
 
-    function _getVersion() private view returns (uint256) {
-        return StorageSlot.getUint256Slot(VERSION_SLOT).value;
-    }
-
-    function _setVersion(uint256 newVersion) private {
-        StorageSlot.getUint256Slot(VERSION_SLOT).value = newVersion;
-    }
-
     function _getRewardsDistributor() private view returns (address) {
         return StorageSlot.getAddressSlot(REWARDS_DISTRIBUTOR_SLOT).value;
     }
@@ -213,6 +205,4 @@ contract AaveAStETHIncentivesController is Ownable, UUPSUpgradeable {
         StorageSlot.getUint256Slot(REWARDS_DURATION_SLOT).value = _rewardsDuration;
         emit RewardsDurationUpdated(_rewardsDuration);
     }
-
-    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 }
