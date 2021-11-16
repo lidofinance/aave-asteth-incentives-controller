@@ -15,8 +15,10 @@ def main():
         return
 
     tx_params = {"from": deployer, "gas_price": Wei("100 gwei")}
+    deploy_stub_incentives_controller(tx_params)
 
-    rewards_manager = deployment.deploy_rewards_manager(tx_params=tx_params)
+
+def deploy_stub_incentives_controller(tx_params):
     incentives_controller_stub = deployment.deploy_incentives_controller_stub_impl(
         tx_params=tx_params
     )
@@ -27,5 +29,4 @@ def main():
         ),
         tx_params=tx_params,
     )
-    rewards_manager.set_rewards_contract(proxied_incentives_controller, tx_params)
-    rewards_manager.transfer_ownership(lido.AGENT_ADDRESS, tx_params)
+    return incentives_controller_stub, proxied_incentives_controller

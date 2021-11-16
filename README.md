@@ -73,5 +73,12 @@ brownie test --coverage --gas
 
 ### `deploy.py`
 
-Contains script to deploy `RewardsManager` and `ERC1967Proxy` with `AaveIncentivesControllerStub`
-as implementation.
+Contains script to deploy `ERC1967Proxy` with `AaveIncentivesControllerStub` as implementation.
+
+### `deploy_rewards_manager.py`
+
+Contains script to deploy `RewardsManager` contract and transfer ownership to `Agent`.
+
+### `upgrade_implementation.py`
+
+Contains script to upgrade implementation of `ERC1967Proxy` with `AaveIncentivesControllerStub` to `AaveAStETHIncentivesController`
