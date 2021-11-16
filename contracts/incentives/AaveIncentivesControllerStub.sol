@@ -9,7 +9,7 @@ import {StorageSlot} from "../dependencies/openzeppelin/StorageSlot.sol";
 import {IStakingRewards} from "../interfaces/IStakingRewards.sol";
 import {IAaveIncentivesController} from "../interfaces/IAaveIncentivesController.sol";
 
-import {UnstructuredStorageVersionised} from "./UnstructuredStorageVersionised.sol";
+import {UnstructuredStorageVersionised} from "../versioning/UnstructuredStorageVersionised.sol";
 
 /// @author psirex
 /// @notice Upgradable stub implementation for the IAaveIncentivesController

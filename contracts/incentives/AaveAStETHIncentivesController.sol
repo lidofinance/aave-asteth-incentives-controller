@@ -9,7 +9,7 @@ import {UUPSUpgradeable} from "../dependencies/openzeppelin/UUPSUpgradable.sol";
 import {StorageSlot} from "../dependencies/openzeppelin/StorageSlot.sol";
 
 import {RewardsUtils} from "../utils/RewardsUtils.sol";
-import {UnstructuredStorageVersionised} from "./UnstructuredStorageVersionised.sol";
+import {UnstructuredStorageVersionised} from "../versioning/UnstructuredStorageVersionised.sol";
 
 import {IAStETH} from "../interfaces/IAStETH.sol";
 import {IStakingRewards} from "../interfaces/IStakingRewards.sol";
