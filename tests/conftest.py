@@ -62,7 +62,7 @@ def rewards_utils_wrapper(RewardsUtilsWrapper, deployer):
 
 
 @pytest.fixture(scope="module")
-def rewards_manager(RewardsManager, owner):
+def rewards_manager(owner):
     return deployment.deploy_rewards_manager({"from": owner})
 
 

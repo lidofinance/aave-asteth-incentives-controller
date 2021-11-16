@@ -2,7 +2,6 @@ from pathlib import Path
 from brownie import (
     Contract,
     ERC1967Proxy,
-    RewardsManager,
     AaveAStETHIncentivesController,
     AaveIncentivesControllerStub,
     config,
@@ -13,6 +12,7 @@ from utils.common import is_almost_equal
 from utils import aave, constants
 
 AAVE_DEPENDENCY_NAME = "lidofinance/aave-protocol-v2@1.0+1"
+REWARDS_MANAGER_DEPENDENCY_NAME = "lidofinance/staking-rewards-sushi@0.1.0"
 
 
 def add_aave_reserve(
@@ -142,6 +142,9 @@ def upgrade_incentives_controller_to_v2(
 
 
 def deploy_rewards_manager(tx_params):
+    RewardsManager = DependencyLoader.load(
+        REWARDS_MANAGER_DEPENDENCY_NAME, "RewardsManager"
+    )
     return RewardsManager.deploy(tx_params)
 
 
