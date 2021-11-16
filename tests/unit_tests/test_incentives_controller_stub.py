@@ -1,4 +1,4 @@
-from brownie import ZERO_ADDRESS, reverts
+from brownie import ZERO_ADDRESS, reverts, history
 from utils import constants, common
 
 
@@ -96,3 +96,12 @@ def test_upgrade(
 def test_handle_action(incentives_controller, stranger):
     # must not fail
     incentives_controller.handleAction(ZERO_ADDRESS, 0, 0, {"from": stranger})
+
+
+def test_period_finish(incentives_controller):
+    assert incentives_controller.periodFinish() == 0
+
+
+def test_notify_reward_amount(incentives_controller, stranger):
+    with reverts(common.typed_solidity_error("MethodNotUnimplementedError()")):
+        incentives_controller.notifyRewardAmount(0, ZERO_ADDRESS, {"from": stranger})

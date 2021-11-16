@@ -6,13 +6,19 @@ import {Ownable} from "../dependencies/openzeppelin/Ownable.sol";
 import {UUPSUpgradeable} from "../dependencies/openzeppelin/UUPSUpgradable.sol";
 import {StorageSlot} from "../dependencies/openzeppelin/StorageSlot.sol";
 
+import {IStakingRewards} from "../interfaces/IStakingRewards.sol";
 import {IAaveIncentivesController} from "../interfaces/IAaveIncentivesController.sol";
 
 import {UnstructuredStorageVersionised} from "./UnstructuredStorageVersionised.sol";
 
 /// @author psirex
 /// @notice Upgradable stub implementation for the IAaveIncentivesController
-contract AaveIncentivesControllerStub is UnstructuredStorageVersionised, IAaveIncentivesController {
+contract AaveIncentivesControllerStub is
+    UnstructuredStorageVersionised,
+    IAaveIncentivesController,
+    IStakingRewards
+{
+    error MethodNotUnimplementedError();
     uint256 private constant _IMPLEMENTATION_VERSION = 1;
 
     constructor() UnstructuredStorageVersionised(_IMPLEMENTATION_VERSION) {
@@ -33,4 +39,14 @@ contract AaveIncentivesControllerStub is UnstructuredStorageVersionised, IAaveIn
         uint256 totalSupply,
         uint256 userBalance
     ) external override {}
+
+    /// @notice Stub implementation to always return 0 as period finish
+    function periodFinish() external pure returns (uint256) {
+        return 0;
+    }
+
+    /// @notice Stub implementation which reverts with MethodNotUnimplementedError()
+    function notifyRewardAmount(uint256 reward, address rewardHolder) external {
+        revert MethodNotUnimplementedError();
+    }
 }

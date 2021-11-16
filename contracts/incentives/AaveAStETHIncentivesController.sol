@@ -12,6 +12,7 @@ import {RewardsUtils} from "../utils/RewardsUtils.sol";
 import {UnstructuredStorageVersionised} from "./UnstructuredStorageVersionised.sol";
 
 import {IAStETH} from "../interfaces/IAStETH.sol";
+import {IStakingRewards} from "../interfaces/IStakingRewards.sol";
 import {IAaveIncentivesController} from "../interfaces/IAaveIncentivesController.sol";
 
 /// @author psirex
@@ -20,7 +21,8 @@ import {IAaveIncentivesController} from "../interfaces/IAaveIncentivesController
 ///     to their stake size.
 contract AaveAStETHIncentivesController is
     UnstructuredStorageVersionised,
-    IAaveIncentivesController
+    IAaveIncentivesController,
+    IStakingRewards
 {
     using RewardsUtils for RewardsUtils.RewardsState;
     using SafeERC20 for IERC20;
