@@ -13,7 +13,6 @@ from utils.constants import (
 
 def test_happy_path(
     incentives_controller,
-    incentives_controller_impl,
     steth_reserve,
     owner,
     rewards_manager,
@@ -36,15 +35,6 @@ def test_happy_path(
     # wait one week before second user deposit
     chain.sleep(ONE_WEEK)
     chain.mine()
-
-    # replace stub implementation in incentives controller with working one
-    incentives_controller = deployment.upgrade_incentives_controller_to_v2(
-        proxy=incentives_controller,
-        implementation=incentives_controller_impl,
-        owner=owner,
-        rewards_distributor=rewards_manager,
-        tx_params={"from": owner},
-    )
 
     # depositor2 send ether into the pool
     depositor2 = depositors[1]

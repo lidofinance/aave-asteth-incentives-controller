@@ -3,32 +3,27 @@
 pragma solidity 0.8.10;
 
 import {IERC20} from "../dependencies/openzeppelin/IERC20.sol";
+import {Address} from "../dependencies/openzeppelin/Address.sol";
 import {Ownable} from "../dependencies/openzeppelin/Ownable.sol";
 import {SafeERC20} from "../dependencies/openzeppelin/SafeERC20.sol";
-import {UUPSUpgradeable} from "../dependencies/openzeppelin/UUPSUpgradable.sol";
-import {StorageSlot} from "../dependencies/openzeppelin/StorageSlot.sol";
-
 import {RewardsUtils} from "../utils/RewardsUtils.sol";
-import {UnstructuredStorageVersionised} from "../versioning/UnstructuredStorageVersionised.sol";
 
 import {IAStETH} from "../interfaces/IAStETH.sol";
 import {IStakingRewards} from "../interfaces/IStakingRewards.sol";
 import {IAaveIncentivesController} from "../interfaces/IAaveIncentivesController.sol";
 
 /// @author psirex
-/// @notice Upgradable implementation for the IAaveIncentivesController
-///     with linear rewards distribution across depositors proportional
+/// @notice Implementation for the IAaveIncentivesController with
+///     linear rewards distribution across depositors proportional
 ///     to their stake size.
-contract AaveAStETHIncentivesController is
-    UnstructuredStorageVersionised,
-    IAaveIncentivesController,
-    IStakingRewards
-{
+contract AaveAStETHIncentivesController is IAaveIncentivesController, IStakingRewards, Ownable {
     using RewardsUtils for RewardsUtils.RewardsState;
     using SafeERC20 for IERC20;
 
     error NotRewardsDistributorError();
     error RewardsPeriodNotFinishedError();
+    error AlreadyInitializedError();
+    error StakingTokenIsNotContractError();
 
     event RewardsDistributorChanged(
         address indexed oldRewardsDistributor,
@@ -39,52 +34,38 @@ contract AaveAStETHIncentivesController is
     event RewardsDurationUpdated(uint256 newDuration);
     event Recovered(address indexed token, uint256 amount);
     event RewardsAccrued(address indexed depositor, uint256 earnedRewards);
-
-    bytes32 private constant REWARDS_DISTRIBUTOR_SLOT =
-        keccak256("Lido.AaveAStETHIncentivesController.rewardsDistributor");
-    bytes32 private constant REWARDS_DURATION_SLOT =
-        keccak256("Lido.AaveAStETHIncentivesController.rewardsDuration");
-    bytes32 private constant REWARDS_STATE_SLOT =
-        keccak256("Lido.AaveAStETHIncentivesController.rewardsState");
-
-    uint256 private constant _IMPLEMENTATION_VERSION = 2;
+    event Initialized(address indexed stakingToken);
 
     IERC20 public immutable REWARD_TOKEN;
-    IAStETH public immutable STAKING_TOKEN;
+
+    IAStETH public stakingToken;
+    address public rewardsDistributor;
+    uint256 public rewardsDuration;
+    RewardsUtils.RewardsState internal rewardsState;
 
     constructor(
         address _rewardToken,
-        address _stakingToken,
-        address _owner,
-        address _rewardsDistributor,
-        uint256 _rewardsDuration
-    ) UnstructuredStorageVersionised(_IMPLEMENTATION_VERSION) {
+        uint256 _rewardsDuration,
+        address _rewardsDistributor
+    ) {
         REWARD_TOKEN = IERC20(_rewardToken);
-        STAKING_TOKEN = IAStETH(_stakingToken);
-        initialize(_owner, _rewardsDistributor, _rewardsDuration);
-    }
-
-    /// @notice Initializes contract if the current version hasn't initialized yet.
-    ///     Transfers ownership to owner, sets rewards distributor and
-    ///     sets rewards duration.
-    function initialize(
-        address owner,
-        address _rewardsDistributor,
-        uint256 _rewardsDuration
-    ) public {
-        _initialize(owner);
         _setRewardsDuration(_rewardsDuration);
         _setRewardsDistributor(_rewardsDistributor);
     }
 
-    /// @notice Returns current rewards distributor address
-    function rewardsDistributor() external view returns (address) {
-        return _getRewardsDistributor();
-    }
-
-    /// @notice Returns current rewards duration
-    function rewardsDuration() external view returns (uint256) {
-        return _getRewardsDuration();
+    /// @notice Sets stakingToken variable if it wasn't set earlier
+    /// @dev setStakingToken sets via standalone method instead of constructor
+    ///     because AAVE's ATokens requires IncentivesController to be passed
+    ///     on the deployment stage.
+    function initialize(address _stakingToken) external onlyOwner {
+        if (address(stakingToken) != address(0)) {
+            revert AlreadyInitializedError();
+        }
+        if (!Address.isContract(_stakingToken)) {
+            revert StakingTokenIsNotContractError();
+        }
+        stakingToken = IAStETH(_stakingToken);
+        emit Initialized(_stakingToken);
     }
 
     /// @notice Updates rewards of the depositor
@@ -97,14 +78,10 @@ contract AaveAStETHIncentivesController is
         uint256 totalSupply,
         uint256 userBalance
     ) external override {
-        if (msg.sender != address(STAKING_TOKEN)) {
+        if (msg.sender != address(stakingToken)) {
             return;
         }
-        uint256 earnedRewards = _getRewardsState().updateDepositorReward(
-            totalSupply,
-            user,
-            userBalance
-        );
+        uint256 earnedRewards = rewardsState.updateDepositorReward(totalSupply, user, userBalance);
         if (earnedRewards > 0) {
             emit RewardsAccrued(user, earnedRewards);
         }
@@ -116,20 +93,16 @@ contract AaveAStETHIncentivesController is
     }
 
     /// @notice Sets the value of rewards duration. Might be called only by the owner
-    function setRewardsDuration(uint256 _rewardsDuration) external onlyOwner {
-        _setRewardsDuration(_rewardsDuration);
+    function setRewardsDuration(uint256 newRewardsDuration) external onlyOwner {
+        _setRewardsDuration(newRewardsDuration);
     }
 
     /// @notice Transfers all earned tokens to the depositor and reset his reward
     function claimReward() public {
-        (uint256 stakedByUser, uint256 totalStaked) = STAKING_TOKEN.getInternalUserBalanceAndSupply(
+        (uint256 stakedByUser, uint256 totalStaked) = stakingToken.getInternalUserBalanceAndSupply(
             msg.sender
         );
-        uint256 reward = _getRewardsState().payDepositorReward(
-            totalStaked,
-            msg.sender,
-            stakedByUser
-        );
+        uint256 reward = rewardsState.payDepositorReward(totalStaked, msg.sender, stakedByUser);
         if (reward > 0) {
             REWARD_TOKEN.safeTransfer(msg.sender, reward);
             emit RewardPaid(msg.sender, reward);
@@ -142,22 +115,22 @@ contract AaveAStETHIncentivesController is
     /// @param reward Amount of tokens to distribute on reward period
     /// @param rewardHolder Address to retrieve reward tokens
     function notifyRewardAmount(uint256 reward, address rewardHolder) external {
-        if (msg.sender != _getRewardsDistributor()) {
+        if (msg.sender != rewardsDistributor) {
             revert NotRewardsDistributorError();
         }
         REWARD_TOKEN.safeTransferFrom(rewardHolder, address(this), reward);
-        uint256 _periodFinish = _getRewardsState().endDate;
-        uint256 _rewardsDuration = _getRewardsDuration();
+        uint256 _periodFinish = rewardsState.endDate;
+        uint256 _rewardsDuration = rewardsDuration;
         uint256 _rewardPerSecond = 0;
         if (block.timestamp >= _periodFinish) {
             _rewardPerSecond = reward / _rewardsDuration;
         } else {
             uint256 remaining = _periodFinish - block.timestamp;
-            uint256 leftover = remaining * _getRewardsState().rewardPerSecond;
+            uint256 leftover = remaining * rewardsState.rewardPerSecond;
             _rewardPerSecond = (reward + leftover) / _rewardsDuration;
         }
-        uint256 totalStaked = STAKING_TOKEN.internalTotalSupply();
-        _getRewardsState().updateRewardPeriod(
+        uint256 totalStaked = stakingToken.internalTotalSupply();
+        rewardsState.updateRewardPeriod(
             totalStaked,
             _rewardPerSecond,
             block.timestamp + _rewardsDuration
@@ -178,61 +151,42 @@ contract AaveAStETHIncentivesController is
     ///     Might be called only by the owner
     /// @param endDate New end date of reward program. Must be greater or equal than the block.timestamp
     function updatePeriodFinish(uint256 endDate) external onlyOwner {
-        uint256 totalStaked = STAKING_TOKEN.internalTotalSupply();
-        _getRewardsState().updateRewardPeriod(
-            totalStaked,
-            _getRewardsState().rewardPerSecond,
-            endDate
-        );
+        uint256 totalStaked = stakingToken.internalTotalSupply();
+        rewardsState.updateRewardPeriod(totalStaked, rewardsState.rewardPerSecond, endDate);
     }
 
     /// @notice Returns amount of tokens earned by the depositor
     /// @param depositor Address of the depositor
     function earned(address depositor) external view returns (uint256) {
-        (uint256 staked, uint256 totalStaked) = STAKING_TOKEN.getInternalUserBalanceAndSupply(
+        (uint256 staked, uint256 totalStaked) = stakingToken.getInternalUserBalanceAndSupply(
             depositor
         );
-        return _getRewardsState().earnedReward(totalStaked, depositor, staked);
+        return rewardsState.earnedReward(totalStaked, depositor, staked);
     }
 
     /// @notice Returns end date of the reward period
     function periodFinish() external view returns (uint256) {
-        return _getRewardsState().endDate;
+        return rewardsState.endDate;
     }
 
     /// @notice Returns current reward per second
     function rewardPerSecond() external view returns (uint256) {
-        return _getRewardsState().rewardPerSecond;
+        return rewardsState.rewardPerSecond;
     }
 
-    function _getRewardsDistributor() private view returns (address) {
-        return StorageSlot.getAddressSlot(REWARDS_DISTRIBUTOR_SLOT).value;
-    }
-
-    function _setRewardsDistributor(address newRewardsDistributor) private {
-        address oldRewardsDistributor = _getRewardsDistributor();
+    function _setRewardsDistributor(address newRewardsDistributor) internal {
+        address oldRewardsDistributor = rewardsDistributor;
         if (oldRewardsDistributor != newRewardsDistributor) {
-            StorageSlot.getAddressSlot(REWARDS_DISTRIBUTOR_SLOT).value = newRewardsDistributor;
+            rewardsDistributor = newRewardsDistributor;
             emit RewardsDistributorChanged(oldRewardsDistributor, newRewardsDistributor);
         }
     }
 
-    function _getRewardsState() private pure returns (RewardsUtils.RewardsState storage result) {
-        bytes32 rewards_state_slot = REWARDS_STATE_SLOT;
-        assembly {
-            result.slot := rewards_state_slot
-        }
-    }
-
-    function _getRewardsDuration() private view returns (uint256) {
-        return StorageSlot.getUint256Slot(REWARDS_DURATION_SLOT).value;
-    }
-
-    function _setRewardsDuration(uint256 _rewardsDuration) private {
-        if (block.timestamp <= _getRewardsState().endDate) {
+    function _setRewardsDuration(uint256 _rewardsDuration) internal {
+        if (block.timestamp <= rewardsState.endDate) {
             revert RewardsPeriodNotFinishedError();
         }
-        StorageSlot.getUint256Slot(REWARDS_DURATION_SLOT).value = _rewardsDuration;
+        rewardsDuration = _rewardsDuration;
         emit RewardsDurationUpdated(_rewardsDuration);
     }
 }

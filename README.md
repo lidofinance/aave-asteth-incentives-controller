@@ -3,31 +3,14 @@
 This repository contains an implementation of incentives controller for AStETH token in AAVE protocol.
 AAVE protocol allows the use of incentives controllers in their AToken, VariableDebtToken, and StableDebtToken
 contracts to distribute rewards on a token mint, burn or transfer. Lido's integration in AAVE uses a custom
-implementation of AToken - AStETH. This repo contains two types of incentives controller implementation that
-can be used with AStETH - `AaveIncentivesControllerStub` and `AaveAStETHIncentivesController`. AStETH token
-doesn't allow to change incentives controller after deployment. To allow update implementation of incentives
-controller for AStETH both `AaveIncentivesControllerStub` and `AaveAStETHIncentivesController` inherit
-`UUPSUpgradable` and `Ownable` contracts and would be deployed behind `ERC1967Proxy` contract, from the
-`OpenZeppelin` package.
+implementation of AToken - AStETH.
 
 ## Core Contracts
-
-### UnstructuredStorageVersionised.sol
-
-This contract encapsulates the logic for initializing and upgrades proxied contracts on a versioned
-basis by the dedicated owner. It inherits from the OpenZeppelin's `Ownable` and `UUPSUpgradable` contracts.
-
-### AaveIncentivesControllerStub.sol
-
-Contains logic with empty implementation of `IAaveIncentivesController`'s `handleAction()` method.
-This contract will be used as implementation on the initial deployment of the AStETH token. In the
-future implementation will be upgraded to `AaveAStETHIncentivesController` contract. Inherits from
-`UnstructuredStorageVersionised.sol` contract.
 
 ### AaveAStETHIncentivesController.sol
 
 Contains logic to the linear distribution of reward tokens across holders of AStETH, proportional to
-the number of tokens the user hold. Contract inherits from `UnstructuredStorageVersionised.sol` contract
+the number of tokens the user hold. Contract inherits from the OpenZeppelin's `Ownable` contract
 and implements Unstructured Storage pattern to simplify future updates of incentivization logic.
 The contract uses `RewardsUtils` library to reusable and convenient work with rewards
 
@@ -73,12 +56,8 @@ brownie test --coverage --gas
 
 ### `deploy.py`
 
-Contains script to deploy `ERC1967Proxy` with `AaveIncentivesControllerStub` as implementation.
+Contains script to deploy and setup `RewardsManager` and `AaveAStETHIncentivesController` contracts. Deployed `RewardsManager` used as rewards distributor in the `AaveAStETHIncentivesController` contract.
 
-### `deploy_rewards_manager.py`
+### `initialize_staking_token.py`
 
-Contains script to deploy `RewardsManager` contract and transfer ownership to `Agent`.
-
-### `upgrade_implementation.py`
-
-Contains script to upgrade implementation of `ERC1967Proxy` with `AaveIncentivesControllerStub` to `AaveAStETHIncentivesController`
+Contains script to finalize deployment of `AaveAStETHIncentivesController`. This script must be run after deployment of AStETH token, to set address of `stakingToken`. As part of the initialization transfers ownership to Lido's Agent.
