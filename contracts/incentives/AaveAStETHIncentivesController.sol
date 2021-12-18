@@ -113,7 +113,7 @@ contract AaveAStETHIncentivesController is IAaveIncentivesController, IStakingRe
     ///     during rewards duration. If the previous reward period hasn't finished, adds the given
     ///     reward to the previous reward. Might be called only by rewards distributor
     /// @param reward Amount of tokens to distribute on reward period
-    /// @param rewardHolder Address to retrieve reward tokens
+    /// @param rewardHolder Address to retrieve reward tokens from
     function notifyRewardAmount(uint256 reward, address rewardHolder) external {
         if (msg.sender != rewardsDistributor) {
             revert NotRewardsDistributorError();
