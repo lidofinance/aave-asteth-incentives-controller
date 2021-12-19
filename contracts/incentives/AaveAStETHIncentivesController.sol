@@ -98,7 +98,7 @@ contract AaveAStETHIncentivesController is IAaveIncentivesController, IStakingRe
     }
 
     /// @notice Transfers all earned tokens to the depositor and reset his reward
-    function claimReward() public {
+    function claimReward() external {
         (uint256 stakedByUser, uint256 totalStaked) = stakingToken.getInternalUserBalanceAndSupply(
             msg.sender
         );
