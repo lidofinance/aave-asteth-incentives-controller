@@ -1,9 +1,7 @@
 from pathlib import Path
 from brownie import (
     Contract,
-    ERC1967Proxy,
     AaveAStETHIncentivesController,
-    AaveIncentivesControllerStub,
     config,
     ZERO_ADDRESS,
     project,
@@ -103,42 +101,15 @@ def deploy_stable_debt_steth_impl(lending_pool, steth, deployer):
     )
 
 
-def deploy_incentives_controller_impl(
+def deploy_incentives_controller(
     reward_token,
-    staking_token,
-    owner=ZERO_ADDRESS,
-    rewards_distributor=ZERO_ADDRESS,
-    rewards_duration=constants.DEFAULT_REWARDS_DURATION,
-    tx_params=None,
-):
-    return AaveAStETHIncentivesController.deploy(
-        reward_token,
-        staking_token,
-        owner,
-        rewards_distributor,
-        rewards_duration,
-        tx_params,
-    )
-
-
-def upgrade_incentives_controller_to_v2(
-    proxy,
-    implementation,
-    owner,
     rewards_distributor,
     rewards_duration=constants.DEFAULT_REWARDS_DURATION,
     tx_params=None,
 ):
-    upgrade_data = implementation.initialize.encode_input(
-        owner, rewards_distributor, rewards_duration
+    return AaveAStETHIncentivesController.deploy(
+        reward_token, rewards_duration, rewards_distributor, tx_params
     )
-    proxy.upgradeToAndCall(implementation, upgrade_data, tx_params)
-    incentives_controller = Contract.from_abi(
-        "AaveAStETHIncentivesControllerProxied", proxy, implementation.abi
-    )
-    assert incentives_controller.IMPLEMENTATION_VERSION() == 2
-    assert incentives_controller.initializedVersion() == 2
-    return incentives_controller
 
 
 def deploy_rewards_manager(tx_params):
@@ -146,15 +117,6 @@ def deploy_rewards_manager(tx_params):
         REWARDS_MANAGER_DEPENDENCY_NAME, "RewardsManager"
     )
     return RewardsManager.deploy(tx_params)
-
-
-def deploy_proxy(implementation, init_data, tx_params):
-    proxy = ERC1967Proxy.deploy(implementation, init_data, tx_params)
-    return Contract.from_abi("ProxiedImpl", proxy, implementation.abi)
-
-
-def deploy_incentives_controller_stub_impl(tx_params):
-    return AaveIncentivesControllerStub.deploy(tx_params)
 
 
 class DependencyLoader(object):

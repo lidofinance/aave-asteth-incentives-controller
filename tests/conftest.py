@@ -67,48 +67,10 @@ def rewards_manager(owner):
 
 
 @pytest.fixture(scope="module")
-def incentives_controller_stub_implementation(deployer):
-    return deployment.deploy_incentives_controller_stub_impl({"from": deployer})
-
-
-@pytest.fixture(scope="module")
-def incentives_controller(
-    Contract,
-    ERC1967Proxy,
-    incentives_controller_stub_implementation,
-    deployer,
-    owner,
-):
-    init_data = incentives_controller_stub_implementation.initialize.encode_input(owner)
-    return deployment.deploy_proxy(
-        implementation=incentives_controller_stub_implementation,
-        init_data=init_data,
-        tx_params={"from": deployer},
-    )
-
-
-@pytest.fixture(scope="module")
-def incentives_controller_impl(
-    ldo, owner, deployer, rewards_distributor, steth_reserve
-):
-    return deployment.deploy_incentives_controller_impl(
+def incentives_controller(ldo, owner, deployer, rewards_manager):
+    return deployment.deploy_incentives_controller(
         reward_token=ldo,
-        staking_token=steth_reserve.atoken,
-        owner=owner,
-        rewards_distributor=rewards_distributor,
-        tx_params={"from": deployer},
-    )
-
-
-@pytest.fixture(scope="module")
-def incentives_controller_impl_mock(
-    ldo, owner, deployer, rewards_distributor, asteth_mock
-):
-    return deployment.deploy_incentives_controller_impl(
-        reward_token=ldo,
-        staking_token=asteth_mock,
-        owner=owner,
-        rewards_distributor=rewards_distributor,
+        rewards_distributor=rewards_manager,
         tx_params={"from": deployer},
     )
 
@@ -164,11 +126,12 @@ def steth_reserve(
     asteth_impl,
     stable_debt_steth_impl,
     variable_debt_steth_impl,
+    incentives_controller,
     pool_admin,
     steth,
     deployer,
 ):
-    return deployment.add_aave_reserve(
+    reserve = deployment.add_aave_reserve(
         lending_pool_configurator=lending_pool_configurator,
         lending_pool=lending_pool,
         atoken_impl=asteth_impl,
@@ -178,6 +141,8 @@ def steth_reserve(
         pool_admin=pool_admin,
         deployer=deployer,
     )
+    incentives_controller.initialize(reserve.atoken, {"from": deployer})
+    return reserve
 
 
 @pytest.fixture(scope="module")
