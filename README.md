@@ -27,9 +27,8 @@ its dependencies as follows. It is recommended to use a Python virtual environme
 git clone https://github.com/lidofinance/aave-asteth-incentives-controller.git
 cd aave-asteth-incentives-controller
 npm install
-python3 -m venv .venv
-source .venv/bin/activate
-pip3 install -r requirements-dev.txt
+poetry install
+poetry shell
 ```
 
 Compile the smart contracts:
